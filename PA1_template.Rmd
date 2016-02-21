@@ -5,21 +5,103 @@ output:
     keep_md: true
 ---
 
+## SET GLOBAL OPTIONS
+```{r setoptions, echo = TRUE}
+library(knitr)
+opts_chunk$set(echo = TRUE)
+```
 
-## Loading and preprocessing the data
+## LOADING AND PREPROCESSING THE DATA
+```{r createTidyData}
+
+## validate the file exists
+dataFileURL <- "https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2Factivity.zip"
+unzippedFilePath <- "./data/activity.csv"
+if (!file.exists(unzippedFilePath))
+{
+	print(paste0("File '", unzippedFilePath, "' does not exist"))
+	print(paste0("Download dataset ", dataFileURL, " and unzip it to 'data' directory"))
+	quit()
+}
+
+## read data and set date in right format
+activity <- read.csv(unzippedFilePath, stringsAsFactors = FALSE)
+activity$date <- as.Date(as.character(activity$date, "YYYY-mm-dd"))
+```
 
 
+## WHAT IS MEAN TOTAL NUMBER OF STEPS TAKEN PER DAY?
+```{r stepsPerDay}
 
-## What is mean total number of steps taken per day?
+## omit the NA values for these calculations
+library(dplyr)
+activityNoNA <- na.omit(activity)
+stepsByDay <- summarize(group_by(activityNoNA, date), stepsPerDay = sum(steps))
+hist(stepsByDay$stepsPerDay, col = "red", xlab = "Number of steps taken per day",
+	 main = "Number of Steps")
+print (paste("Mean of steps taken per day:", mean(stepsByDay$stepsPerDay)))
+print (paste("Median of steps taken per day:", median(stepsByDay$stepsPerDay)))
+```
 
+## WHAT IS THE AVERAGE DAILY ACTIVITY PATTERN?
+```{r dailyActivityPattern}
+stepsByInterval <- summarize(group_by(activityNoNA, interval), meanStepsPerInterval = mean(steps))
+plot (stepsByInterval$interval, stepsByInterval$meanStepsPerInterval, type = "l",
+	  xlab = "Interval (minutes)", ylab = "Average steps per day",
+	  main = "Average Daily Activity Pattern")
+```
 
+## IMPUTING MISSING VALUES
+```{r imputingMissingValues}
+numberOfRowsWithNA <- nrow(activity) - sum(complete.cases(activity))
+print (paste("Total number of rows with NAs:", numberOfRowsWithNA))
 
-## What is the average daily activity pattern?
+## function imputes NA steps by using the mean steps taken for that interval
+imputeSteps <- function (activity, meanStepsByInterval)
+{
+	for (idx in 1:nrow(activity))
+	{
+		if (is.na(activity[idx,]$steps))
+		{
+			intervalNA <- activity[idx,]$interval
+			meanStepsForInterval <- filter(meanStepsByInterval,
+										   interval == intervalNA)$meanStepsPerInterval
+			activity[idx,]$steps <- round(meanStepsForInterval)
+		}
+	}
+	return (activity)
+}
+activityImputed <- imputeSteps(activity, stepsByInterval)
 
+stepsByDayImputed <- summarize(group_by(activityImputed, date), stepsPerDay = sum(steps))
+hist(stepsByDayImputed$stepsPerDay, col = "red", xlab = "Number of steps taken per day",
+	 main = "Number of Steps (NAs imputed)")
+print (paste("Mean of steps taken per day (imputed):", mean(stepsByDayImputed$stepsPerDay)))
+print (paste("Median of steps taken per day (imputed):", median(stepsByDayImputed$stepsPerDay)))
+```
 
+### By imputing steps, the mean steps per day has dropped by 0.55 step which is not significant!
 
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+## ARE THERE DIFFERENCES IN ACTIVITY PATTERNS BETWEEN WEEKDAYS AND WEEKENDS?
+```{r weekdayWeekendPattern}
+library(lattice)
+activityImputed$day <- weekdays(activityImputed$date)
+activityImputed$wdaywend <- apply(activityImputed, 1, function(x)
+									{
+										if ( (x[4]== "Saturday") | (x[4]== "Sunday") )
+										{
+											return("weekend")
+										}
+										else
+										{
+											return ("weekday")
+										}
+									})
+activityImputed$wdaywend <- as.factor(activityImputed$wdaywend)
+stepsByIntervalImputed <- activityImputed %>%
+		select(wdaywend, interval, steps)%>%
+		group_by(wdaywend, interval) %>%
+		summarize(meanStepsPerInterval = mean(steps))
+xyplot(meanStepsPerInterval ~ interval | wdaywend, data = stepsByIntervalImputed, layout = c(1,2),
+	   type = "l", xlab = "Interval (minutes)", ylab = "Number of Steps")
+```
