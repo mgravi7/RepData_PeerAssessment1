@@ -49,9 +49,14 @@ stepsByInterval <- summarize(group_by(activityNoNA, interval), meanStepsPerInter
 plot (stepsByInterval$interval, stepsByInterval$meanStepsPerInterval, type = "l",
 	  xlab = "Interval (minutes)", ylab = "Average steps per day",
 	  main = "Average Daily Activity Pattern")
+maxAverageDF <- stepsByInterval[which.max(stepsByInterval$meanStepsPerInterval),]
+print ("Maximum number of steps taken in 5 minute interval (on average):")
+print (paste("   Interval value:", maxAverageDF$interval))	
+print (paste("   Number of steps:", maxAverageDF$meanStepsPerInterval))		  
 ```
 
 ## IMPUTING MISSING VALUES
+## The approach is by using the mean steps taken for that interval across all days
 ```{r imputingMissingValues}
 numberOfRowsWithNA <- nrow(activity) - sum(complete.cases(activity))
 print (paste("Total number of rows with NAs:", numberOfRowsWithNA))

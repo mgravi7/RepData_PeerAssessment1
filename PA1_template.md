@@ -36,26 +36,6 @@ activity$date <- as.Date(as.character(activity$date, "YYYY-mm-dd"))
 ```r
 ## omit the NA values for these calculations
 library(dplyr)
-```
-
-```
-## 
-## Attaching package: 'dplyr'
-```
-
-```
-## The following objects are masked from 'package:stats':
-## 
-##     filter, lag
-```
-
-```
-## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union
-```
-
-```r
 activityNoNA <- na.omit(activity)
 stepsByDay <- summarize(group_by(activityNoNA, date), stepsPerDay = sum(steps))
 hist(stepsByDay$stepsPerDay, col = "red", xlab = "Number of steps taken per day",
@@ -91,7 +71,33 @@ plot (stepsByInterval$interval, stepsByInterval$meanStepsPerInterval, type = "l"
 
 ![plot of chunk dailyActivityPattern](figure/dailyActivityPattern-1.png)
 
+```r
+maxAverageDF <- stepsByInterval[which.max(stepsByInterval$meanStepsPerInterval),]
+print ("Maximum number of steps taken in 5 minute interval (on average):")
+```
+
+```
+## [1] "Maximum number of steps taken in 5 minute interval (on average):"
+```
+
+```r
+print (paste("   Interval value:", maxAverageDF$interval))	
+```
+
+```
+## [1] "   Interval value: 835"
+```
+
+```r
+print (paste("   Number of steps:", maxAverageDF$meanStepsPerInterval))		  
+```
+
+```
+## [1] "   Number of steps: 206.169811320755"
+```
+
 ## IMPUTING MISSING VALUES
+## The approach is by using the mean steps taken for that interval across all days
 
 ```r
 numberOfRowsWithNA <- nrow(activity) - sum(complete.cases(activity))
